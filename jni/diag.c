@@ -37,15 +37,14 @@
 #include <fcntl.h>
 #include <stdarg.h>
 
+#include "diag.h"
+
 #define  LOG_TAG    "diaggetroot"
 #define  LOGI(...)  __android_log_print(ANDROID_LOG_INFO,LOG_TAG,__VA_ARGS__)
 #define  LOGD(...)  __android_log_print(ANDROID_LOG_DEBUG,LOG_TAG,__VA_ARGS__)
 #define  LOGE(...)  __android_log_print(ANDROID_LOG_ERROR,LOG_TAG,__VA_ARGS__)
 
 #include <android/log.h>
-
-//#define DELAYED_RSP_ID_ADDRESS 0xc0b8840c; // Xperia SX 113
-#define DELAYED_RSP_ID_ADDRESS 0xc0cb0938; // SC-05D
 
 #define DIAG_IOCTL_GET_DELAYED_RSP_ID   8
 struct diagpkt_delay_params {
@@ -55,7 +54,8 @@ struct diagpkt_delay_params {
 };
 
 static int
-inject_value (void *adr, int value, int fd)
+inject_value (unsigned int address, int value,
+              int fd, unsigned int delayed_rsp_id_address)
 {
   uint16_t ptr;
   int i;
@@ -66,7 +66,7 @@ inject_value (void *adr, int value, int fd)
   ptr = 0;
   params.rsp_ptr = &ptr;
   params.size = 2;
-  params.num_bytes_ptr = (void*)DELAYED_RSP_ID_ADDRESS;
+  params.num_bytes_ptr = (void*)delayed_rsp_id_address;
   ret = ioctl(fd, DIAG_IOCTL_GET_DELAYED_RSP_ID, &params);
   if (ret < 0) {
     LOGD("failed to ioctl\n");
@@ -90,7 +90,7 @@ inject_value (void *adr, int value, int fd)
 
   params.size = 2;
   for (i = 0; i < ptr; i++) {
-    params.rsp_ptr = adr;
+    params.rsp_ptr = (void*)address;
     params.num_bytes_ptr = &num;
     ret = ioctl(fd, DIAG_IOCTL_GET_DELAYED_RSP_ID, &params);
     if (ret < 0) {
@@ -102,20 +102,39 @@ inject_value (void *adr, int value, int fd)
 }
 
 int
-inject (void *adr, int value, int fd)
+inject (struct values *data, int data_length,
+        unsigned int delayed_rsp_id_address)
 {
-  static int fd2;
-  if (fd == 0) {
-    if (fd2 == 0) {
-      fd2 = open("/dev/diag", O_RDWR);
-    }
-    fd = fd2;
-  }
+  int fd;
+
+  fd = open("/dev/diag", O_RDWR);
   if (fd < 0) {
-    LOGE("fd=%d", fd);
+    LOGE("failed to open /dev/diag.");
     return -1;
   }
-  return inject_value(adr, value, fd);
+
+  return inject_with_file_descriptor(data, data_length,
+                                     delayed_rsp_id_address,
+                                     fd);
+}
+
+int
+inject_with_file_descriptor (struct values *data, int data_length,
+                             unsigned int delayed_rsp_id_address, int fd)
+{
+  int i;
+
+  for (i = 0; i < data_length; i++) {
+    int ret;
+    LOGD("data[%d] addr=%x value=%x (%c%c)",
+         i, data[i].address, data[i].value,
+         data[i].value & 0xff, data[i].value >> 8);
+    ret = inject_value(data[i].address, data[i].value, fd, delayed_rsp_id_address);
+    if (ret < 0)
+      return ret;
+  }
+
+  return 0;
 }
 
 /*

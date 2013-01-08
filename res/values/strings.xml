@@ -1,7 +1,8 @@
 <resources>
 
     <string name="app_name">breaksuiddiag</string>
-    <string name="hello_world">Hello world!</string>
+    <string name="unsupported_message">This device is not supported.</string>
+    <string name="success_message">Success.</string>
     <string name="menu_settings">Settings</string>
     <string name="title_activity_main">BreakSuidDiag</string>
 
