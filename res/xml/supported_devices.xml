@@ -6,7 +6,7 @@
            delayed_rsp_id="0xc0cb0938"/>
   </device>
   <device name="SO-05D">
-    <build id="7.0.D.1.113"
+    <build id="7.0.D.1.117"
            uevent_helper ="0xc0b6cc38"
            delayed_rsp_id="0xc0b8840c"/>
   </device>
