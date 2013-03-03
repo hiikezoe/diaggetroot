@@ -59,6 +59,31 @@ supported_device supported_devices[] = {
 
 static int n_supported_devices = sizeof(supported_devices) / sizeof(supported_devices[0]);
 
+static bool
+detect_injection_addresses(diag_injection_addresses *injection_addresses)
+{
+  int i;
+  char device[PROP_VALUE_MAX];
+  char build_id[PROP_VALUE_MAX];
+
+  __system_property_get("ro.product.model", device);
+  __system_property_get("ro.build.display.id", build_id);
+
+  for (i = 0; i < n_supported_devices; i++) {
+    if (!strcmp(device, supported_devices[i].device) &&
+        !strcmp(build_id, supported_devices[i].build_id)) {
+      injection_addresses->uevent_helper_address =
+        supported_devices[i].uevent_helper_address;
+      injection_addresses->delayed_rsp_id_address =
+        supported_devices[i].delayed_rsp_id_address;
+        return true;
+    }
+  }
+  printf("%s (%s) is not supported.\n", device, build_id);
+
+  return false;
+}
+
 static int
 cmpare(const void *a , const void *b)
 {
@@ -91,16 +116,18 @@ prepare_injection_data(struct values *data, size_t data_size,
 }
 
 static bool
-inject_getroot_command_with_fd(unsigned int uevent_helper_address,
-                               unsigned int delayed_rsp_id_address,
+inject_getroot_command_with_fd(diag_injection_addresses *injection_addresses,
                                int fd)
 {
   struct values data[400];
   int data_length;
 
-  data_length = prepare_injection_data(data, sizeof(data), uevent_helper_address);
+  data_length = prepare_injection_data(data, sizeof(data),
+                                       injection_addresses->uevent_helper_address);
 
-  return inject_with_file_descriptor(data, data_length, delayed_rsp_id_address, fd) == 0;
+  return inject_with_file_descriptor(data, data_length,
+                                     injection_addresses->delayed_rsp_id_address,
+                                     fd) == 0;
 }
 
 static bool
@@ -118,11 +145,13 @@ inject_uevent_helper(diag_injection_addresses *injection_addresses)
 jboolean
 Java_com_example_diaggetroot_MainActivity_getrootnative(JNIEnv *env,
                                                         jobject thiz,
-                                                        int fd,
-                                                        unsigned int uevent_helper_address,
-                                                        unsigned int delayed_rsp_id_address)
+                                                        int fd)
 {
-  return inject_getroot_command_with_fd(uevent_helper_address, delayed_rsp_id_address, fd);
+  diag_injection_addresses injection_addresses;
+  if (!detect_injection_addresses(&injection_addresses))
+    return JNI_FALSE;
+
+  return inject_getroot_command_with_fd(&injection_addresses, fd);
 }
 
 static void
@@ -132,31 +161,6 @@ usage()
 
   printf("Usage:\n");
   printf("\tdiaggetroot [uevent_helper address] [delayed_rsp_id address]\n");
-}
-
-static bool
-detect_injection_addresses(diag_injection_addresses *injection_addresses)
-{
-  int i;
-  char device[PROP_VALUE_MAX];
-  char build_id[PROP_VALUE_MAX];
-
-  __system_property_get("ro.product.model", device);
-  __system_property_get("ro.build.display.id", build_id);
-
-  for (i = 0; i < n_supported_devices; i++) {
-    if (!strcmp(device, supported_devices[i].device) &&
-        !strcmp(build_id, supported_devices[i].build_id)) {
-      injection_addresses->uevent_helper_address =
-        supported_devices[i].uevent_helper_address;
-      injection_addresses->delayed_rsp_id_address =
-        supported_devices[i].delayed_rsp_id_address;
-        return true;
-    }
-  }
-  printf("%s (%s) is not supported.\n", device, build_id);
-
-  return false;
 }
 
 int

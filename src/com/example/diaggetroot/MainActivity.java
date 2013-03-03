@@ -50,61 +50,12 @@ import org.xmlpull.v1.XmlPullParserException;
 public class MainActivity extends Activity {
   final static String TAG = "##DiagGetroot##";
 
-  private class InjectionAddresses {
-    public int mUeventHelper;
-    public int mDelayedRspId;
-
-    InjectionAddresses(int ueventHelper,
-                     int delayedRspId) {
-      mUeventHelper = ueventHelper;
-      mDelayedRspId = delayedRspId;
-    }
-  };
-
   static {
     System.loadLibrary("diaggetrootjni");
   }
-  native boolean getrootnative(int fd,
-                               int uevent_helper_address,
-                               int delayed_rsp_id_address);
+  native boolean getrootnative(int fd);
 
-  private InjectionAddresses findInjectionAddresses() {
-    XmlResourceParser parser = getResources().getXml(R.xml.supported_devices);
-
-    int eventType;
-    try {
-      eventType = parser.getEventType();
-      String tagName;
-      String deviceName = null;
-      do {
-        if (eventType == XmlPullParser.START_TAG) {
-          tagName = parser.getName();
-          if (tagName.equals("device")) {
-            deviceName = parser.getAttributeValue(null, "name");
-          } else if (Build.MODEL.equals(deviceName) &&
-                     tagName.equals("build")) {
-            String id = parser.getAttributeValue(null, "id");
-            if (Build.DISPLAY.equals(id)) {
-              int ueventHelper = parser.getAttributeUnsignedIntValue(null, "uevent_helper", 0);
-              int delayedRspId = parser.getAttributeUnsignedIntValue(null, "delayed_rsp_id", 0);
-              if (ueventHelper != 0 && delayedRspId != 0) {
-                return new InjectionAddresses(ueventHelper, delayedRspId);
-              }
-            }
-          }
-        }
-        eventType = parser.next();
-      } while (eventType != XmlPullParser.END_DOCUMENT);
-    } catch (XmlPullParserException e) {
-      throw new RuntimeException("I died", e);
-    } catch (IOException e) {
-      throw new RuntimeException("I died", e);
-    }
-
-    return null;
-  }
-
-  private boolean useMMS(InjectionAddresses addresses) {
+  private boolean useMMS() {
     Uri uri = Uri.parse("content://mms/0/part");
     try {
       ContentValues values2 = new ContentValues();
@@ -123,9 +74,7 @@ public class MainActivity extends Activity {
       int fint;
       fint = fld.getInt(fd);
       Log.d(TAG, "fint=" + fint);
-      return getrootnative(fint,
-                           addresses.mUeventHelper,
-                           addresses.mDelayedRspId);
+      return getrootnative(fint);
     } catch (Exception e) {
       e.printStackTrace();
     }
@@ -137,16 +86,10 @@ public class MainActivity extends Activity {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_main);
     TextView view = (TextView)this.findViewById(R.id.text);
-    InjectionAddresses addresses = findInjectionAddresses();
-    if (addresses == null) {
-      Log.d(TAG, "Unsupported model = " + Build.MODEL + " display_id = " + Build.DISPLAY);
-      view.setText(getString(R.string.unsupported_message));
+    if (useMMS()) {
+      view.setText(getString(R.string.success_message));
     } else {
-      Log.d(TAG, "\tuevent_helper = " + String.format("0x%x", addresses.mUeventHelper));
-      Log.d(TAG, "\tdelayed_rsp_id = " + String.format("0x%x", addresses.mDelayedRspId));
-      if (useMMS(addresses)) {
-        view.setText(getString(R.string.success_message));
-      }
+      view.setText(getString(R.string.unsupported_message));
     }
   }
 }
