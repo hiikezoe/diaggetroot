@@ -172,7 +172,7 @@ main (int argc, char **argv)
 
   fd = open("/dev/diag", O_RDWR);
   if (fd < 0) {
-    LOGE("failed to open /dev/diag dut to %s.", strerror(errno));
+    LOGE("failed to open /dev/diag due to %s.", strerror(errno));
     exit(EXIT_FAILURE);
   }
 
