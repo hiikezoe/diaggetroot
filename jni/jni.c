@@ -157,8 +157,6 @@ Java_com_example_diaggetroot_MainActivity_getrootnative(JNIEnv *env,
 static void
 usage()
 {
-  int i;
-
   printf("Usage:\n");
   printf("\tdiaggetroot [uevent_helper address] [delayed_rsp_id address]\n");
 }
@@ -169,7 +167,6 @@ main (int argc, char **argv)
   diag_injection_addresses injection_addresses;
 
   if (argc != 3) {
-    int supported_device_index;
     if (!detect_injection_addresses(&injection_addresses)) {
       usage();
       exit(EXIT_FAILURE);
