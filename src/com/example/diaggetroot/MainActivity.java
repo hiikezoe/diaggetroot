@@ -31,8 +31,6 @@ package com.example.diaggetroot;
 import java.io.IOException;
 import java.io.FileDescriptor;
 import java.lang.reflect.Field;
-import android.content.res.Resources;
-import android.content.res.XmlResourceParser;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -43,9 +41,6 @@ import android.widget.TextView;
 import android.view.View;
 import android.util.AttributeSet;
 import android.util.Log;
-import android.util.Xml;
-import org.xmlpull.v1.XmlPullParser;
-import org.xmlpull.v1.XmlPullParserException;
 
 public class MainActivity extends Activity {
   final static String TAG = "##DiagGetroot##";
