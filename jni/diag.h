@@ -35,9 +35,6 @@ typedef struct _diag_injection_addresses {
   unsigned long int delayed_rsp_id_address;
 } diag_injection_addresses;
 
-int inject (struct values *data, int data_length,
-            unsigned int delayed_rsp_id_address);
-
 int inject_with_file_descriptor (struct values *data, int data_length,
                                  unsigned int delayed_rsp_id_address, int fd);
 

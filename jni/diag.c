@@ -102,23 +102,6 @@ inject_value (unsigned int address, int value,
 }
 
 int
-inject (struct values *data, int data_length,
-        unsigned int delayed_rsp_id_address)
-{
-  int fd;
-
-  fd = open("/dev/diag", O_RDWR);
-  if (fd < 0) {
-    LOGE("failed to open /dev/diag.");
-    return -1;
-  }
-
-  return inject_with_file_descriptor(data, data_length,
-                                     delayed_rsp_id_address,
-                                     fd);
-}
-
-int
 inject_with_file_descriptor (struct values *data, int data_length,
                              unsigned int delayed_rsp_id_address, int fd)
 {
