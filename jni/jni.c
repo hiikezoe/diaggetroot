@@ -60,7 +60,8 @@ supported_device supported_devices[] = {
 static int n_supported_devices = sizeof(supported_devices) / sizeof(supported_devices[0]);
 
 static int
-cmpare(const void *a , const void *b) {
+cmpare(const void *a , const void *b)
+{
   const struct values *x = a;
   const struct values *y = b;
   if (x->value < y->value) {
