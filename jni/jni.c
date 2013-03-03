@@ -77,7 +77,7 @@ static int
 prepare_injection_data(struct values *data, size_t data_size,
                        unsigned int uevent_helper_address)
 {
-  const char path[]="/data/local/tmp/getroot";
+  const char path[] = "/data/local/tmp/getroot";
   int i, data_length;
 
   for (i = 0, data_length = 0; i < sizeof(path) && i < data_size; i += 2) {
