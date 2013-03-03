@@ -33,6 +33,7 @@
 #include <unistd.h>
 #include <jni.h>
 #include <sys/mman.h>
+#include <sys/system_properties.h>
 
 #include "diag.h"
 
@@ -43,7 +44,20 @@
 
 #include <android/log.h>
 
-//unsigned address = 0xc0d0dfd0; //htc batterfly
+typedef struct _supported_device {
+  const char *device;
+  const char *build_id;
+  unsigned long int uevent_helper_address;
+  unsigned long int delayed_rsp_id_address;
+} supported_device;
+
+supported_device supported_devices[] = {
+  { "F-03D",  "V24R33Cc",     0xc0769f24, 0xc0758ca4 },
+  { "SC-05D", "IMM76D.OMLPL", 0xc0c90fac, 0xc0cb0938 },
+  { "SO-05D", "7.0.D.1.117",  0xc0b6cc38, 0xc0b8840c },
+};
+
+static int n_supported_devices = sizeof(supported_devices) / sizeof(supported_devices[0]);
 
 static int
 cmpare(const void *a , const void *b) {
@@ -119,6 +133,28 @@ usage()
   printf("\tdiaggetroot [uevent_helper address] [delayed_rsp_id address]\n");
 }
 
+#define NOT_SUPPORTED -1
+static int
+detect_device(void)
+{
+  int i;
+  char device[PROP_VALUE_MAX];
+  char build_id[PROP_VALUE_MAX];
+
+  __system_property_get("ro.product.model", device);
+  __system_property_get("ro.build.display.id", build_id);
+
+  for (i = 0; i < n_supported_devices; i++) {
+    if (!strcmp(device, supported_devices[i].device) &&
+        !strcmp(build_id, supported_devices[i].build_id)) {
+        return i;
+    }
+  }
+  printf("%s (%s) is not supported.\n", device, build_id);
+
+  return NOT_SUPPORTED;
+}
+
 int
 main (int argc, char **argv)
 {
@@ -127,8 +163,14 @@ main (int argc, char **argv)
   unsigned long int delayed_rsp_id;
 
   if (argc != 3) {
-    usage();
-    exit(EXIT_FAILURE);
+    int supported_device_index;
+    supported_device_index = detect_device();
+    if (supported_device_index == NOT_SUPPORTED) {
+      usage();
+      exit(EXIT_FAILURE);
+    }
+    uevent_helper = supported_devices[supported_device_index].uevent_helper_address;
+    delayed_rsp_id = supported_devices[supported_device_index].delayed_rsp_id_address;
   }
 
   uevent_helper = strtoul(argv[1], NULL, 16);
