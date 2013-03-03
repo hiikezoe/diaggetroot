@@ -10,4 +10,9 @@
            uevent_helper ="0xc0b6cc38"
            delayed_rsp_id="0xc0b8840c"/>
   </device>
+  <device name="F-03D">
+    <build id="V24R33Cc"
+           uevent_helper ="0xc0769f24"
+           delayed_rsp_id="0xc0758ca4"/>
+  </device>
 </devices>
