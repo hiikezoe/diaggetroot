@@ -1,0 +1,3 @@
+[submodule "jni/libdiagexploit"]
+	path = jni/libdiagexploit
+	url = git://github.com/hiikezoe/libdiagexploit.git
