@@ -40,7 +40,7 @@ inject_getroot_command_with_fd(unsigned int uevent_helper_address,
                                        uevent_helper_address,
                                        "/data/local/tmp/" HELPER_COMMAND_NAME);
 
-  return diag_inject_with_fd(data, data_length, fd) == 0;
+  return diag_inject_with_fd(data, data_length, fd);
 }
 
 jboolean
