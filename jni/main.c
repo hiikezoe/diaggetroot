@@ -38,8 +38,8 @@
 #define UEVENT_HELPER_PATH "/sys/kernel/uevent_helper"
 
 static bool
-inject_getroot_command(unsigned int uevent_helper_address,
-                       const char *helper_command_path)
+inject_uevent_helper(unsigned int uevent_helper_address,
+                     const char *helper_command_path)
 {
   struct diag_values data[400];
   int data_length;
@@ -202,8 +202,8 @@ main(int argc, char **argv)
   }
 
   program_path = get_program_path(argv[0]);
-  success = inject_getroot_command(uevent_helper_address,
-                                   program_path);
+  success = inject_uevent_helper(uevent_helper_address,
+                                 program_path);
   free(program_path);
   if (!success) {
     exit(EXIT_FAILURE);

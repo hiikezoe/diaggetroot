@@ -30,8 +30,8 @@
 #include "common.h"
 
 static bool
-inject_getroot_command_with_fd(unsigned int uevent_helper_address,
-                               int fd)
+inject_uevent_helper_with_fd(unsigned int uevent_helper_address,
+                             int fd)
 {
   struct diag_values data[400];
   int data_length;
@@ -54,7 +54,7 @@ Java_com_example_diaggetroot_MainActivity_getrootnative(JNIEnv *env,
     return JNI_FALSE;
   }
 
-  return inject_getroot_command_with_fd(uevent_helper_address, fd);
+  return inject_uevent_helper_with_fd(uevent_helper_address, fd);
 }
 /*
 vi:ts=2:nowrap:ai:expandtab:sw=2
